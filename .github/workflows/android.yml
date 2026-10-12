@@ -19,31 +19,34 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Configurar Android SDK
-        uses: android-actions/setup-android@v3
-
       - name: Configurar Gradle
         uses: gradle/actions/setup-gradle@v4
+
+      - name: Localizar projeto Android
+        shell: bash
+        run: |
+          SETTINGS=$(find . -type f \( -name settings.gradle -o -name settings.gradle.kts \) \
+            -not -path '*/.gradle/*' -print -quit)
+
+          if [ -z "$SETTINGS" ]; then
+            echo "Erro: settings.gradle não encontrado."
+            exit 1
+          fi
+
+          PROJECT_DIR=$(dirname "$SETTINGS")
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
       - name: Compilar APK
         shell: bash
         run: |
           set -e
-          SETTINGS=$(find . -type f \( -name settings.gradle -o -name settings.gradle.kts \) -not -path '*/.gradle/*' -print -quit)
-
-          if [ -z "$SETTINGS" ]; then
-            echo "Arquivo settings.gradle não encontrado."
-            exit 1
-          fi
-
-          PROJECT_DIR=$(dirname "$SETTINGS")
           cd "$PROJECT_DIR"
 
           if [ -f gradlew ]; then
             chmod +x gradlew
-            ./gradlew assembleDebug
+            ./gradlew assembleDebug --stacktrace
           else
-            gradle assembleDebug
+            gradle assembleDebug --stacktrace
           fi
 
       - name: Disponibilizar APK
@@ -51,3 +54,4 @@ jobs:
         with:
           name: Calculadora-Capivara-APK
           path: '**/build/outputs/apk/debug/*.apk'
+          if-no-files-found: error
